@@ -1,14 +1,11 @@
 import datetime
 import os
-import time
 
 import poai
 import schedule
 
 from PyOfficeRobot.core.WeChatType import WeChat
 from PyOfficeRobot.lib.decorator_utils.instruction_url import instruction
-
-import uiautomation as uia
 
 wx = WeChat()
 
@@ -134,36 +131,5 @@ def chat_by_gpt(
                     presence_penalty,
                 )
                 wx.SendMsg(reply_msg)  # 向`who`发送消息
-        except:
-            pass
-
-
-@instruction
-def auto_response():
-    # 自己的微信名
-    my_wechat_name = "Kimo"
-    # 自动回复消息内容
-    response_text = "已收到您的订单信息"
-    # 双击聊天按钮，会话列表跳到有新消息的会话
-    uia.WindowControl(ClassName="WeChatMainWndForPC").SwitchToThisWindow()
-    uia.WindowControl(ClassName="WeChatMainWndForPC").ButtonControl(
-        Name="聊天"
-    ).DoubleClick(simulateMove=False)
-    time.sleep(0.5)
-
-    # 获取会话列表
-    chats = wx.GetSessionList()
-    if len(chats) > 0:
-        # 打开第一个聊天窗口
-        wx.ChatWith(chats[0])
-        try:
-            # 获取当前窗口中最后一条聊天记录，返回数据类型是个tuple（微信名，信息内容，runtime ID）
-            last_msg = wx.GetLastMessage
-            if last_msg[0] != my_wechat_name:
-                """
-                条件：
-                不是自己:(last_msg[0] != my_wechat_name)
-                """
-                send_message(who=last_msg[0], message=response_text)
         except:
             pass
