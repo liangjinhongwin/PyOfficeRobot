@@ -1,11 +1,14 @@
 import datetime
 import os
+import time
 
 import poai
 import schedule
 
 from PyOfficeRobot.core.WeChatType import WeChat
 from PyOfficeRobot.lib.decorator_utils.instruction_url import instruction
+
+import uiautomation as uia
 
 wx = WeChat()
 
@@ -31,11 +34,18 @@ def send_message(who, message):
 def chat_by_keywords(who, keywords):
     wx.GetSessionList()  # 获取会话列表
     wx.ChatWith(who)  # 打开`who`聊天窗口
-    temp_msg = ''
+    temp_msg = ""
     while True:
         try:
-            friend_name, receive_msg = wx.GetAllMessage[-1][0], wx.GetAllMessage[-1][1]  # 获取朋友的名字、发送的信息
-            if (friend_name == who) & (receive_msg != temp_msg) & (receive_msg in keywords.keys()):
+            friend_name, receive_msg = (
+                wx.GetAllMessage[-1][0],
+                wx.GetAllMessage[-1][1],
+            )  # 获取朋友的名字、发送的信息
+            if (
+                (friend_name == who)
+                & (receive_msg != temp_msg)
+                & (receive_msg in keywords.keys())
+            ):
                 """
                 条件：
                 朋友名字正确:(friend_name == who)
@@ -50,24 +60,27 @@ def chat_by_keywords(who, keywords):
 
 
 @instruction
-def receive_message(who='文件传输助手', txt='userMessage.txt', output_path='./'):
+def receive_message(who="文件传输助手", txt="userMessage.txt", output_path="./"):
     wx.GetSessionList()  # 获取会话列表
     wx.ChatWith(who)  # 打开`who`聊天窗口
     while True:
-        friend_name, receive_msg = wx.GetAllMessage[-1][0], wx.GetAllMessage[-1][1]  # 获取朋友的名字、发送的信息
+        friend_name, receive_msg = (
+            wx.GetAllMessage[-1][0],
+            wx.GetAllMessage[-1][1],
+        )  # 获取朋友的名字、发送的信息
         current_time = datetime.datetime.now()
-        cut_line = '^^^----------^^^'
-        print('--' * 88)
-        with open(os.path.join(output_path, txt), 'a+') as output_file:
-            output_file.write('\n')
+        cut_line = "^^^----------^^^"
+        print("--" * 88)
+        with open(os.path.join(output_path, txt), "a+") as output_file:
+            output_file.write("\n")
             output_file.write(cut_line)
-            output_file.write('\n')
+            output_file.write("\n")
             output_file.write(str(current_time))
-            output_file.write('\n')
+            output_file.write("\n")
             output_file.write(str(friend_name))
-            output_file.write('\n')
+            output_file.write("\n")
             output_file.write(str(receive_msg))
-            output_file.write('\n')
+            output_file.write("\n")
 
 
 @instruction
@@ -78,15 +91,27 @@ def send_message_by_time(who, message, time):
 
 
 @instruction
-def chat_by_gpt(who, api_key, model_engine="text-davinci-002", max_tokens=1024, n=1, stop=None, temperature=0.5,
-                top_p=1,
-                frequency_penalty=0.0, presence_penalty=0.6):
+def chat_by_gpt(
+    who,
+    api_key,
+    model_engine="text-davinci-002",
+    max_tokens=1024,
+    n=1,
+    stop=None,
+    temperature=0.5,
+    top_p=1,
+    frequency_penalty=0.0,
+    presence_penalty=0.6,
+):
     wx.GetSessionList()  # 获取会话列表
     wx.ChatWith(who)  # 打开`who`聊天窗口
     temp_msg = None
     while True:
         try:
-            friend_name, receive_msg = wx.GetAllMessage[-1][0], wx.GetAllMessage[-1][1]  # 获取朋友的名字、发送的信息
+            friend_name, receive_msg = (
+                wx.GetAllMessage[-1][0],
+                wx.GetAllMessage[-1][1],
+            )  # 获取朋友的名字、发送的信息
             if (friend_name == who) & (receive_msg != temp_msg):
                 """
                 条件：
@@ -96,9 +121,49 @@ def chat_by_gpt(who, api_key, model_engine="text-davinci-002", max_tokens=1024, 
                 """
                 print(receive_msg)
                 temp_msg = receive_msg
-                reply_msg = poai.chatgpt.chat(api_key, receive_msg,
-                                              model_engine, max_tokens, n, stop, temperature,
-                                              top_p, frequency_penalty, presence_penalty)
+                reply_msg = poai.chatgpt.chat(
+                    api_key,
+                    receive_msg,
+                    model_engine,
+                    max_tokens,
+                    n,
+                    stop,
+                    temperature,
+                    top_p,
+                    frequency_penalty,
+                    presence_penalty,
+                )
                 wx.SendMsg(reply_msg)  # 向`who`发送消息
+        except:
+            pass
+
+
+@instruction
+def auto_response():
+    # 自己的微信名
+    my_wechat_name = "Kimo"
+    # 自动回复消息内容
+    response_text = "已收到您的订单信息"
+    # 双击聊天按钮，会话列表跳到有新消息的会话
+    uia.WindowControl(ClassName="WeChatMainWndForPC").SwitchToThisWindow()
+    uia.WindowControl(ClassName="WeChatMainWndForPC").ButtonControl(
+        Name="聊天"
+    ).DoubleClick(simulateMove=False)
+    time.sleep(0.5)
+
+    # 获取会话列表
+    chats = wx.GetSessionList()
+    if len(chats) > 0:
+        # 打开第一个聊天窗口
+        wx.ChatWith(chats[0])
+        try:
+            # 获取当前窗口中最后一条聊天记录，返回数据类型是个tuple（微信名，信息内容，runtime ID）
+            last_msg = wx.GetLastMessage
+            if last_msg[0] != my_wechat_name:
+                """
+                条件：
+                不是自己:(last_msg[0] != my_wechat_name)
+                """
+                send_message(who=last_msg[0], message=response_text)
         except:
             pass
